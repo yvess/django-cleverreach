@@ -33,7 +33,7 @@ ANREDE = {'male': _('Herr'), 'female': _('Frau')}
 
 soap = None
 
-class Cleverreach(object):
+class Client(object):
 
     def __init__(self):
         self.soap = Client(URL)  #immediately opens up a connection.

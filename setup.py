@@ -5,7 +5,7 @@ from distutils.core import setup
 import os
 import setuplib
 
-packages, package_data = setuplib.find_packages('email_registration')
+packages, package_data = setuplib.find_packages('cleverreach')
 
 setup(name='django-cleverreach',
     version=__import__('cleverreach').__version__,
