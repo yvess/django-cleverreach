@@ -9,13 +9,15 @@ Installation
 
 1.  ``pip install django-cleverreach``
 
-2. Add this to your ``settings.py``::
+2. Add this to your ``settings.py`` ::
 
   CLEVERREACH = {'api_key': '<API KEY>',}
 
 
 It's highly recommended to also put cleverreach list and form ids as well as the
 user parameters in there, so you have them if you need them.
+The easiest way to find the group id is by checking the URL of the group on
+the receiver groups page.
 
 Django-cleverreach uses the ``suds`` module: https://fedorahosted.org/suds/
 

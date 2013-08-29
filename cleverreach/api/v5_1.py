@@ -9,21 +9,16 @@ The Cleverreach API requires suds: https://fedorahosted.org/suds/
 You have to define the following parameters in your settings.py:
 
     CLEVERREACH = {'api_key': '<API KEY>',
-                     'nl_de': '<GROUP-ID>',
-                     'nl_fr': '<GROUP-ID>',
-                  }
+                   }
 
-Currently the groups parameters are not used but it forces you to write it down
-because you will need it at some point.
-The easiest way to find the group id is by checking the URL of the group on
-the receiver groups page.
+API documentation is at http://api.cleverreach.com/soap/doc/5.0/
+
 """
 
 import datetime, time
 import logging
 
 from django.conf import settings
-from django.utils.translation import ugettext_lazy as _
 
 from suds.client import Client as SudsClient
 from suds import WebFault
@@ -36,7 +31,6 @@ logger = logging.getLogger('cleverreach.api')
 URL = 'http://api.cleverreach.com/soap/interface_v5.1.php?wsdl'
 API_KEY = settings.CLEVERREACH.get('api_key')
 
-ANREDE = {'male': _('Herr'), 'female': _('Frau')}
 
 soap = None
 
