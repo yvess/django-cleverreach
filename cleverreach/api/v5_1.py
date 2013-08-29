@@ -9,21 +9,28 @@ The Cleverreach API requires suds: https://fedorahosted.org/suds/
 You have to define the following parameters in your settings.py:
 
     CLEVERREACH = {'api_key': '<API KEY>',
-                    'groups': {'nl_de': '<GROUP-ID>',
-                               'nl_fr': '<GROUP-ID>'},
+                     'nl_de': '<GROUP-ID>',
+                     'nl_fr': '<GROUP-ID>',
                   }
 
-Currently the groups parameter is not used but it forces you to write it down
+Currently the groups parameters are not used but it forces you to write it down
 because you will need it at some point.
+The easiest way to find the group id is by checking the URL of the group on
+the receiver groups page.
 """
 
 import datetime, time
+import logging
 
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
-from suds.client import Client
+from suds.client import Client as SudsClient
 from suds import WebFault
+
+from cleverreach import CleverreachAPIException
+
+logger = logging.getLogger('cleverreach.api')
 
 
 URL = 'http://api.cleverreach.com/soap/interface_v5.1.php?wsdl'
@@ -33,63 +40,154 @@ ANREDE = {'male': _('Herr'), 'female': _('Frau')}
 
 soap = None
 
+
+
 class Client(object):
 
-    def __init__(self):
-        self.soap = Client(URL)  #immediately opens up a connection.
+    def __init__(self, raise_exceptions=True):
+        self.soap = SudsClient(URL)  #immediately opens up a connection.
+        self.raise_exceptions = raise_exceptions
 
+    # TODO: dotted path helper
 
-    """ Forms have the format [(name){id, name, description}] """
-    def get_forms(self, group_id):
+    def query_data(self, method, *args, **kwargs):
         try:
-            query = self.soap.service.formsGetList(API_KEY, group_id)
-        except WebFault, e:
-            return e
-        return query.data
+            response = getattr(self.soap.service, method)(API_KEY, *args, **kwargs)
+        except WebFault as e:
+            if self.raise_exceptions:
+                raise e
+            else:
+                logger.error(e)
+                return response.data
+        else:
+            if response.status == "ERROR":
+                if self.raise_exceptions:
+                    raise CleverreachAPIException(response.message, response.statuscode)
+                else:
+                    logger.error(response.message)
 
-    def send_activation_mail(self, form_id, email):
-        """Will send the activation mail to the given email"""
-        try:
-            query = self.soap.service.formsActivationMail(API_KEY, form_id, email)
-        except WebFault, e:
-            return e
-        return query.data
+        return response.data
 
-    def get_by_email(self, list_id, email):
-        try:
-            query = self.soap.service.receiverGetByEmail(API_KEY, list_id, email, 1)
-        except WebFault, e:
-            return e
-        return query.data
-
-    def get_form_code(self, form_id):
-        try:
-            query = self.soap.service.formsGetCode(API_KEY, form_id)
-        except WebFault, e:
-            return e
-        return query.data
+    # Client
 
 
-    def get_group_list(self):
-        try:
-            query = self.soap.service.groupGetList(API_KEY)
-        except WebFault, e:
-            return e
-        return query.data
+    # Group
 
-    def insert_new_user(self, user, group_id, activated=False, sendmail=True,
-                        form_id=None, attrs=None):
-        """ The default form only accepts email, registered, activated, source and attributes.
-            To add more fields you have to add them as attributes. Make sure the keys
-            are the same as the name of the fields in the form. (Check with get_by_email)
-
-            `attrs` needs to be a list in the form ['first_name', 'last_name'] and
-            the attribute must exist on the user object.
-
-            If you have data from facebook which hast utf-8 encoded unicode strings,
-            you need to use the following syntax: 'lastname': r'%s' % user['last_name']
+    def group_get_list(self):
         """
+        Returns a list of group classes of the form:
+        (group){
+           id = 108907
+           name = "test1"
+           last_mailing = 1335887342
+           last_changed = 1335886187
+           count = 84
+           inactive_count = 0
+           total_count = 84
+         }
+        The dict keys are actually object properties.
+        """
+        return self.query_data('groupGetList')
 
+
+    def group_clear(self, list_id):
+        """
+        truncates the contents of a the Group
+
+        Warning: This may have heavy impact on statistics and campaigns
+        since every related data (receivers, orders, events) will removed.
+        """
+        return self.query_data('groupClear', list_id)
+
+
+    # Forms
+
+    def forms_get_list(self, list_id):
+        """
+        Returns a list of available forms for the given group.
+        Forms are object with the properties [id, name, description]
+        """
+        return self.query_data('formsGetList', list_id)
+
+
+    def forms_get_code(self, form_id):
+        """
+        Returns the HTML code for the given embedded form.
+        @param form_id: the id of the form (not the list!)
+        """
+        return self.query_data('formsGetCode', form_id)
+
+
+    def forms_activation_mail(self, form_id, email, doidata=None):
+        """
+        Will send the activation mail to the given email.
+        You will have to manualy add the receiver first with "receiver.add"
+        or use an existing one.
+        If the user allready is activated, status will return an error.
+        """
+        if not doidata:
+            doidata = {'user_ip': '127.0.0.1', 'user_agent': 'mozilla',
+                       'referer': 'http://www.gotham.com/newsletter_subscribe/',
+                       'postdata': 'firtsname:bruce,lastname:whayne,nickname:Batman',
+                       'info': 'Extra info. the more you provide, the better.'}
+
+        return self.query_data('formsSendActivationMail', form_id, email, doidata)
+
+    # Mailing
+
+    # Receiver
+
+    def receiver_add(self, list_id, receiver):
+        """
+        Adds a new single receiver
+
+        This function tries to add a single receiver.
+        If the receiver allready exists, the operation will Fail.
+        Use receiver_update in that case.
+        """
+        return self.query_data('receiverAdd', list_id, receiver)
+
+
+    def receiver_get_by_email(self, list_id, email, level=1):
+        """
+        Gets userdetails based on given readout level.
+        Possible levels (bit whise).
+        000 (0) > Basic readout with (de)activation dates
+        001 (1) > including attributes (if available)
+        010 (2) > including Events (if available)
+        100 (4) > including Orders (if available)
+        """
+        return self.query_data('receiverAdd', list_id, email, level)
+
+
+    def receiver_set_inactive(self, list_id, email):
+        """
+        Deactivates a given receiver/email
+        The receiver wont receive anymore mailings from the system.
+        This sets/overwrites the deactivation date with the current date.
+        """
+        return self.query_data('receiverAdd', list_id, email)
+
+    
+    # Helpers
+
+    def insert_new_user(self, user, list_id, activated=False, sendmail=True,
+                        form_id=None, attrs=None):
+        """
+        Adds a new single receiver
+        The default form only accepts email, registered, activated,
+        source and attributes.
+        To add more fields you have to add them as attributes. Make sure the keys
+        are the same as the name of the fields in the form. (Check with get_by_email)
+        
+        `attrs` needs to be a list in the form ['first_name', 'last_name'] and
+        the attribute must exist on the user object.
+        Attribute keys may only contain lowercase a-z and 0-9.
+
+        If you have data from facebook which has utf-8 encoded unicode strings,
+        you need to use the following syntax: 'lastname': r'%s' % user['last_name']
+        """
+  
         newReceiver = {
                 'email':user.email,
                 'registered':time.mktime(datetime.datetime.now().timetuple()),
@@ -97,23 +195,22 @@ class Client(object):
         }
         if attrs:
             attributes = [{'key': a, 'value': getattr(user, a)} for a in attrs]
-            newReceiver['attributes'] = attributes,
+            newReceiver['attributes'] = attributes
+
         if activated:
             newReceiver['activated'] = time.mktime(datetime.datetime.now().timetuple())
-        try:
-            query = self.soap.service.receiverAdd(API_KEY, group_id, newReceiver)
-        except WebFault, e:
-            return e
+
+        data = self.receiver_add(list_id, newReceiver)
+
         if sendmail and not activated:
             if not form_id:
-                forms = self.get_forms(group_id)
+                forms = self.get_forms(list_id)
                 form_id = forms[0]['id']
-            self.send_activation_mail(form_id, user.email)
-        return query.data
+            self.forms_activation_mail(form_id=form_id, email=user.email)
+        return data
 
-    def deactivate_user(self, email, group_id):
-        try:
-            query = self.soap.service.receiverSetInactive(API_KEY, group_id, email)
-        except WebFault, e:
-            return e
-        return query.data
+
+
+
+
+
