@@ -37,6 +37,13 @@ In this case the module logs errors using the logger ``cleverreach.api``.
 The currently supported API version is 5.1.
 
 
+Documentation
+-------------
+
+The documentation is on readthedocs.org:
+
+http://django-cleverreach.readthedocs.org/en/latest/
+
 
 WARNING: cleverreach updates its APIs and turns old ones off without notice.
  Keep track of your installations and update this repository as needed.
