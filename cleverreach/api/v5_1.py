@@ -8,8 +8,7 @@ The Cleverreach API requires suds: https://fedorahosted.org/suds/
 
 You have to define the following parameters in your settings.py:
 
-    CLEVERREACH = {'api_key': '<API KEY>',
-                   }
+    CLEVERREACH = {'api_key': '<API KEY>',}
 
 API documentation is at http://api.cleverreach.com/soap/doc/5.0/
 
@@ -32,15 +31,11 @@ URL = 'http://api.cleverreach.com/soap/interface_v5.1.php?wsdl'
 API_KEY = settings.CLEVERREACH.get('api_key')
 
 
-soap = None
-
-
-
 class Client(object):
 
-    def __init__(self, raise_exceptions=True):
+    def __init__(self):
         self.soap = SudsClient(URL)  #immediately opens up a connection.
-        self.raise_exceptions = raise_exceptions
+        self.raise_exceptions = settings.CLEVERREACH.get('raise_exceptions', True)
 
     # TODO: dotted path helper
 
