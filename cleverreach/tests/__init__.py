@@ -22,6 +22,7 @@
 """
 from cleverreach import CleverreachAPIException
 
+import datetime, time
 from django.conf import settings
 from django.test import TestCase
 from ..api import Client
@@ -40,7 +41,7 @@ class TestTest(TestCase):
         self.list1 = settings.CLEVERREACH['list1']
         self.list2 = settings.CLEVERREACH['list2']
         self.form1 = settings.CLEVERREACH['form1']
-        self.form2 = settings.CLEVERREACH['form2']
+        self.form2 = settings.CLEVERREACH['form2']  # email only
         self.form3 = settings.CLEVERREACH['form3']
         self.client = Client()
         self.email1 = 'dc-test@spambog.com'
@@ -98,9 +99,93 @@ class TestTest(TestCase):
             self.client.group_clear(self.list2)
 
 
+    def test_receiver_add(self):
+        try:
+            # create two receivers. One activated, the other not.
+            receiver1 = {
+                'email': self.email1,
+                'registered': time.mktime(datetime.datetime.now().timetuple()),
+                'source':'API TEST ADD',
+                'activated': time.mktime(datetime.datetime.now().timetuple())
+            }
+            receiver2 = {
+                'email': self.email2,
+                'registered': time.mktime(datetime.datetime.now().timetuple()),
+                'source':'API TEST ADD',
+                'deactivated': time.mktime(datetime.datetime.now().timetuple())
+            }
+            data = self.client.receiver_add(self.list2, receiver1)
+            self.assertEqual(data.email, self.email1)
+            self.assertEqual(data.active, True)
+            self.assertEqual(data.source, 'API TEST ADD')
+
+            data = self.client.receiver_add(self.list2, receiver2)
+            self.assertEqual(data.email, self.email2)
+            self.assertEqual(data.active, False)
+            self.assertEqual(data.source, 'API TEST ADD')
+
+            # add an existing user
+            self.assertRaisesMessage(CleverreachAPIException,
+                                        'duplicate data',
+                self.client.receiver_add, list_id=self.list2,
+                                                  receiver=receiver1)
+
+        finally:
+            self.client.group_clear(self.list2)
 
 
+    def test_receiver_get_by_email(self):
+        try:
+            # add a user with some attributes
+            receiver1 = {
+                'email': self.email1,
+                'registered': time.mktime(datetime.datetime.now().timetuple()),
+                'source':'API TEST GET',
+                'activated': time.mktime(datetime.datetime.now().timetuple()),
+                'attributes': [
+                    {'key': 'first_name', 'value': u'Brüce'},
+                    {'key': 'last_name', 'value': u'Wayne'},
+                    {'key': 'salutation', 'value': 'male'},
+                ]
+            }
+            data = self.client.receiver_add(self.list1, receiver1)
+            self.assertEqual(data.email, self.email1)
+            # test the actual mehtod
+            data = self.client.receiver_get_by_email(self.list1, self.email1)
+            self.assertEqual(data.email, self.email1)
+            self.assertEqual(data.source, 'API TEST GET')
+            self.assertEqual(len(data.attributes), 3)
+            values = [unicode(a.value) for a in data.attributes]
+            self.assertTrue(u'Brüce' in values)
+            self.assertTrue(u'Wayne' in values)
+            self.assertTrue(u'male' in values)
 
+        finally:
+            self.client.group_clear(self.list1)
+
+
+    def test_receiver_set_active_and_receiver_set_inactive(self):
+        try:
+            # create an inactive receiver:
+            receiver1 = {
+                'email': self.email1,
+                'source': 'API TEST SET ACTIVE',
+                'deactivated': time.mktime(datetime.datetime.now().timetuple())
+            }
+            data = self.client.receiver_add(self.list2, receiver1)
+            self.assertEqual(data.email, self.email1)
+            self.assertEqual(data.active, False)
+            # set it active
+            data = self.client.receiver_set_active(self.list2, self.email1)
+            self.assertEqual(data.email, self.email1)
+            self.assertEqual(data.active, True)
+            # set it inactive
+            data = self.client.receiver_set_inactive(self.list2, self.email1)
+            self.assertEqual(data.email, self.email1)
+            self.assertEqual(data.active, False)
+
+        finally:
+            self.client.group_clear(self.list2)
 
 
 

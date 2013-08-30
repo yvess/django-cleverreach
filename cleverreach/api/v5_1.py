@@ -56,7 +56,9 @@ class Client(object):
         else:
             if response.status == "ERROR":
                 if self.raise_exceptions:
-                    raise CleverreachAPIException(response.message, response.statuscode)
+                    message = u'Error for method %s: %s. Data: %s' % \
+                              (method, response.message, response.data)
+                    raise CleverreachAPIException(message, response.statuscode)
                 else:
                     logger.error(response.message)
 
@@ -83,7 +85,6 @@ class Client(object):
         """
         return self.query_data('groupGetList')
 
-
     def group_clear(self, list_id):
         """
         truncates the contents of a the Group
@@ -103,14 +104,12 @@ class Client(object):
         """
         return self.query_data('formsGetList', list_id)
 
-
     def forms_get_code(self, form_id):
         """
         Returns the HTML code for the given embedded form.
         @param form_id: the id of the form (not the list!)
         """
         return self.query_data('formsGetCode', form_id)
-
 
     def forms_activation_mail(self, form_id, email, doidata=None):
         """
@@ -138,9 +137,10 @@ class Client(object):
         This function tries to add a single receiver.
         If the receiver allready exists, the operation will Fail.
         Use receiver_update in that case.
+        Have a look at the insert_new_user helper function to
+        see the structure of the receiver dictionary.
         """
         return self.query_data('receiverAdd', list_id, receiver)
-
 
     def receiver_get_by_email(self, list_id, email, level=1):
         """
@@ -151,8 +151,15 @@ class Client(object):
         010 (2) > including Events (if available)
         100 (4) > including Orders (if available)
         """
-        return self.query_data('receiverAdd', list_id, email, level)
+        return self.query_data('receiverGetByEmail', list_id, email, level)
 
+    def receiver_set_active(self, list_id, email):
+        """
+        Deactivates a given receiver/email
+        The receiver wont receive anymore mailings from the system.
+        This sets/overwrites the deactivation date with the current date.
+        """
+        return self.query_data('receiverSetActive', list_id, email)
 
     def receiver_set_inactive(self, list_id, email):
         """
@@ -160,12 +167,12 @@ class Client(object):
         The receiver wont receive anymore mailings from the system.
         This sets/overwrites the deactivation date with the current date.
         """
-        return self.query_data('receiverAdd', list_id, email)
+        return self.query_data('receiverSetInactive', list_id, email)
 
-    
+
     # Helpers
 
-    def insert_new_user(self, user, list_id, activated=False, sendmail=True,
+    def insert_new_user(self, user, list_id, activated=None, sendmail=True,
                         form_id=None, attrs=None):
         """
         Adds a new single receiver
@@ -178,8 +185,8 @@ class Client(object):
         the attribute must exist on the user object.
         Attribute keys may only contain lowercase a-z and 0-9.
 
-        If you have data from facebook which has utf-8 encoded unicode strings,
-        you need to use the following syntax: 'lastname': r'%s' % user['last_name']
+        if activated is not set the cleverreach default settings are used.
+
         """
   
         newReceiver = {
@@ -191,12 +198,22 @@ class Client(object):
             attributes = [{'key': a, 'value': getattr(user, a)} for a in attrs]
             newReceiver['attributes'] = attributes
 
-        if activated:
-            newReceiver['activated'] = time.mktime(datetime.datetime.now().timetuple())
+        if type(activated) == bool:
+            if activated:
+                newReceiver['activated'] = time.mktime(
+                    datetime.datetime.now().timetuple())
+            else:
+                newReceiver['deactivated'] = time.mktime(
+                    datetime.datetime.now().timetuple())
+        elif type(activated == datetime.datetime):
+            newReceiver['activated'] = time.mktime(activated.timetuple())
+        elif type(activated == float):  # assume timetuple
+            newReceiver['activated'] = activated
+
 
         data = self.receiver_add(list_id, newReceiver)
 
-        if sendmail and not activated:
+        if sendmail and not data.active:
             if not form_id:
                 forms = self.get_forms(list_id)
                 form_id = forms[0]['id']
