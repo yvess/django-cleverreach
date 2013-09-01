@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    cleverreach.api
+   cleverreach
 
 
 Installation
@@ -49,6 +50,11 @@ and ``suds.WebFault`` in case of a network error.
 
 
 The currently supported API version is 5.1.
+
+
+There is a helper function ``cleverreach.utils.insert_new_user()`` which takes a User
+instance or a cleaned_data dictionary and sends it to cleverreach.
+
 
 
 WARNING: cleverreach updates its APIs and turns old ones off without notice.

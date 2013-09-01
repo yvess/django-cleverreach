@@ -14,7 +14,6 @@ API documentation is at http://api.cleverreach.com/soap/doc/5.0/
 
 """
 
-import datetime, time
 import logging
 
 from django.conf import settings
@@ -132,8 +131,12 @@ class Client(object):
         This function tries to add a single receiver.
         If the receiver allready exists, the operation will Fail.
         Use receiver_update in that case.
-        Have a look at the insert_new_user helper function to
-        see the structure of the receiver dictionary.
+        The default form only accepts email, registered, activated,
+        source and attributes.
+        To add more fields you have to add them as attributes. Make sure the keys
+        are the same as the name of the fields in the form. (Check with get_by_email)
+        Attribute keys may only contain lowercase a-z and 0-9.
+
         """
         return self.query_data('receiverAdd', list_id, receiver)
 
@@ -163,60 +166,3 @@ class Client(object):
         This sets/overwrites the deactivation date with the current date.
         """
         return self.query_data('receiverSetInactive', list_id, email)
-
-
-    # Helpers
-
-    def insert_new_user(self, user, list_id, activated=None, sendmail=True,
-                        form_id=None, attrs=None):
-        """
-        Adds a new single receiver
-        The default form only accepts email, registered, activated,
-        source and attributes.
-        To add more fields you have to add them as attributes. Make sure the keys
-        are the same as the name of the fields in the form. (Check with get_by_email)
-        
-        `attrs` needs to be a list in the form ['first_name', 'last_name'] and
-        the attribute must exist on the user object.
-        Attribute keys may only contain lowercase a-z and 0-9.
-
-        if activated is not set the cleverreach default settings are used.
-
-        """
-  
-        newReceiver = {
-                'email':user.email,
-                'registered':time.mktime(datetime.datetime.now().timetuple()),
-                'source':'API',
-        }
-        if attrs:
-            attributes = [{'key': a, 'value': getattr(user, a)} for a in attrs]
-            newReceiver['attributes'] = attributes
-
-        if type(activated) == bool:
-            if activated:
-                newReceiver['activated'] = time.mktime(
-                    datetime.datetime.now().timetuple())
-            else:
-                newReceiver['deactivated'] = time.mktime(
-                    datetime.datetime.now().timetuple())
-        elif type(activated == datetime.datetime):
-            newReceiver['activated'] = time.mktime(activated.timetuple())
-        elif type(activated == float):  # assume timetuple
-            newReceiver['activated'] = activated
-
-
-        data = self.receiver_add(list_id, newReceiver)
-
-        if sendmail and not data.active:
-            if not form_id:
-                forms = self.get_forms(list_id)
-                form_id = forms[0]['id']
-            self.forms_activation_mail(form_id=form_id, email=user.email)
-        return data
-
-
-
-
-
-
