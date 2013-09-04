@@ -185,8 +185,8 @@ class TestAPI51(TestCase):
 
             self.assertRaisesMessage(CleverreachAPIException,
                 '''Error for method receiverGetByEmail: data not found. Data: (receiverData){
-   email = "dc-test@spambog.com"
- }''',
+   email = "%s"
+ }''' % self.email1,
                 self.client.receiver_get_by_email, list_id=self.list2,
                                                   email=self.email1)
 
