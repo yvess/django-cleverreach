@@ -166,3 +166,7 @@ class Client(object):
         This sets/overwrites the deactivation date with the current date.
         """
         return self.query_data('receiverSetInactive', list_id, email)
+
+    def receiver_delete(self, list_id, email):
+        """ Deletes an email out of an group. """
+        return self.query_data('receiverDelete', list_id, email)

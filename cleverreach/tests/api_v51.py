@@ -172,6 +172,27 @@ class TestAPI51(TestCase):
         finally:
             self.client.group_clear(self.list2)
 
+    def test_receiver_delete(self):
+        try:
+            receiver1 = {
+                'email': self.email1,
+                'source': 'API TEST DELETE',
+            }
+            data = self.client.receiver_add(self.list2, receiver1)
+            self.assertEqual(data.email, self.email1)
+            data = self.client.receiver_delete(self.list2, self.email1)
+            self.assertEqual(data, self.email1)
+
+            self.assertRaisesMessage(CleverreachAPIException,
+                '''Error for method receiverGetByEmail: data not found. Data: (receiverData){
+   email = "dc-test@spambog.com"
+ }''',
+                self.client.receiver_get_by_email, list_id=self.list2,
+                                                  email=self.email1)
+
+        finally:
+            self.client.group_clear(self.list2)
+
 
 
 
