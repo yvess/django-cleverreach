@@ -151,7 +151,7 @@ class Client(object):
             001 (1) > including attributes (if available)
             010 (2) > including Events (if available)
             100 (4) > including Orders (if available)
-        
+
         """
         return self.query_data('receiverGetByEmail', list_id, email, level)
 

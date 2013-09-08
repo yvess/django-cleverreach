@@ -9,7 +9,7 @@ api Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`v5_1` Module
+:mod:`api.v5_1` Module
 ------------------
 
 .. automodule:: cleverreach.api.v5_1

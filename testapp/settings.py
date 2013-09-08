@@ -10,7 +10,7 @@ sys.path.append(PROJECT_ROOT)
 try:
     from secrets import *
 except ImportError:
-    pass
+    CLEVERREACH = {'api_key': None}
 
 
 DEBUG = True
