@@ -65,16 +65,18 @@ class Client(object):
 
     def group_get_list(self):
         """
-        Returns a list of group classes of the form:
-        (group){
-           id = 108907
-           name = "test1"
-           last_mailing = 1335887342
-           last_changed = 1335886187
-           count = 84
-           inactive_count = 0
-           total_count = 84
-         }
+        Returns a list of group classes of the form::
+
+            (group){
+               id = 108907
+               name = "test1"
+               last_mailing = 1335887342
+               last_changed = 1335886187
+               count = 84
+               inactive_count = 0
+               total_count = 84
+             }
+
         The dict keys are actually object properties.
         """
         return self.query_data('groupGetList')
@@ -101,7 +103,7 @@ class Client(object):
     def forms_get_code(self, form_id):
         """
         Returns the HTML code for the given embedded form.
-        @param form_id: the id of the form (not the list!)
+        form_id -- the id of the form (not the list!)
         """
         return self.query_data('formsGetCode', form_id)
 
@@ -143,11 +145,13 @@ class Client(object):
     def receiver_get_by_email(self, list_id, email, level=1):
         """
         Gets userdetails based on given readout level.
-        Possible levels (bit whise).
-        000 (0) > Basic readout with (de)activation dates
-        001 (1) > including attributes (if available)
-        010 (2) > including Events (if available)
-        100 (4) > including Orders (if available)
+        Possible levels (bit whise)::
+
+            000 (0) > Basic readout with (de)activation dates
+            001 (1) > including attributes (if available)
+            010 (2) > including Events (if available)
+            100 (4) > including Orders (if available)
+        
         """
         return self.query_data('receiverGetByEmail', list_id, email, level)
 
