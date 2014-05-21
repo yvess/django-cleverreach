@@ -70,7 +70,7 @@ def insert_new_user(user, list_id, activated=None, sendmail=True,
 
     if sendmail and not data.active:
         if not form_id:
-            forms = client.get_forms(list_id)
+            forms = client.forms_get_list(list_id)
             form_id = forms[0]['id']
         client.forms_activation_mail(form_id=form_id, email=user.email)
     return data
