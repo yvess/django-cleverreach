@@ -60,7 +60,7 @@ def insert_new_user(user, list_id, activated=None, sendmail=True,
         else:
             newReceiver['deactivated'] = time.mktime(
                 datetime.datetime.now().timetuple())
-    elif type(activated == datetime.datetime):
+    elif type(activated) == datetime.datetime:
         newReceiver['activated'] = time.mktime(activated.timetuple())
     elif type(activated == float):  # assume timetuple
         newReceiver['activated'] = activated
