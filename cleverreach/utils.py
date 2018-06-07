@@ -7,7 +7,7 @@ __all__ = ['insert_new_user',]
 
 import datetime, time
 
-from api.v5_1 import Client
+from .api.v5_1 import Client
 
 class User(object):
     """ Bunch class for converting a dict into an object. """
